@@ -1,9 +1,11 @@
 # firemongo
 Export Mongo collections to Firebase database
 
-# run
+## run
 
-## set your FIREBASE_DATABASE_NAME and MONGO_URL and serviceAccountKey.json
+- set FIREBASE_DATABASE_NAME
+- set MONGO_URL
+- set serviceAccountKey.json
 
 ```bash
 $ npm i
