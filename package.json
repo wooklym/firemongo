@@ -1,0 +1,37 @@
+{
+  "name": "firemongo",
+  "version": "1.0.0",
+  "description": "Export Mongo collections to Firebase database",
+  "main": "index.js",
+  "scripts": {
+    "build": "babel index.js -o build/main.js",
+    "start": "node build/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wooklym/firemongo.git"
+  },
+  "keywords": [
+    "mongodb",
+    "firebase"
+  ],
+  "author": "wooklym",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wooklym/firemongo/issues"
+  },
+  "homepage": "https://github.com/wooklym/firemongo#readme",
+  "dependencies": {
+    "firebase-admin": "^4.0.4",
+    "mongo-async": "^0.2.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-plugin-transform-regenerator": "^6.16.1",
+    "babel-plugin-transform-runtime": "^6.15.0",
+    "babel-polyfill": "^6.16.0",
+    "babel-preset-latest": "^6.16.0",
+    "regenerator": "^0.9.5"
+  }
+}
