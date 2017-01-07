@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
-import mongo from 'mongo-async';
+import MongoClient from 'mongodb';
+import Promise from 'promise';
 
 const MONGO_URL = process.env.MONGO_URL || '<YOUR_MONGO_URL>';
 const FIREBASE_DATABASE_NAME = process.env.FIREBASE_DATABASE_NAME || '<YOUR_FIREBASE_DATABASE_NAME>';
@@ -12,52 +13,77 @@ admin.initializeApp({
   databaseURL: FIREBASE_DATABASE_URL
 });
 
-const ref = admin.database().ref('/');
-
-async function getCollectionsFromMongo (callback) {
-  try {
-    const db = await mongo.connect(MONGO_URL);
-    const collections = await db.collections();
-
-    const collectionNames = collections.map(c => c.s.name);
-    console.log(collectionNames);
-    collectionNames.forEach((name, count) => {
-      db.collection(name).find({}).toArray((err, docs) => {
-        if (err) {
-          return callback(err);
-        }
-
-        if (docs.length === 0) {
-          return callback(`${name} is empty.`);
-        }
-
-        const docObjects = docs.reduce((o, v) => {
-          o[v._id] = v;
-          return o;
-        }, {});
-
-        if (name !== 'system.indexes') {
-          callback(null, {name: name, docObjects});
-        }
-      });
+function getMongoConnection(url) {
+  return new Promise((resolve, reject) => {
+    MongoClient.connect(url, (err, db) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(db);
     });
-  } catch (error) {
-    callback (error);
+  });
+}
+
+function getMongoCollections(db) {
+  return new Promise((resolve, reject) => {
+    db.collections((err, collections) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(collections);
+    });
+  });
+}
+
+function getDocsOfCollection(db, collectionName) {
+  return new Promise((resolve, reject) => {
+    db.collection(collectionName).find({}).toArray((err, docs) => {
+      if (err) {
+        return reject(err);
+      }
+      console.log(`size of ${collectionName}: ${docs.length}`);
+      resolve(docs);
+    });
+  });
+}
+
+function mongoDocsToObject(docs) {
+  return docs.reduce((o, v) => {
+    o[v._id] = v;
+    return o;
+  }, {});
+}
+
+async function saveMongoCollectionToFirebase(db, ref, collectionName) {
+  try {
+    const docs = await getDocsOfCollection(db, collectionName);
+    const docObj = mongoDocsToObject(docs);
+    console.log(`start migration : collection ${collectionName}`);
+    return ref.child(collectionName).set(docObj);
+  } catch (e) {
+    console.log(e);
   }
 }
 
+async function migrateFromMongoToFirebase() {
+  try {
+    const db = await getMongoConnection(MONGO_URL);
+    const collections = await getMongoCollections(db);
 
-getCollectionsFromMongo((err, result) => {
-  if (err) {
-    return console.log(err);
+    const ref = admin.database().ref('/');
+
+    const promises = collections.map(c => c.s.name)
+      .filter(collectionName => collectionName !== 'system.indexes')
+      .map(async (collectionName) => await saveMongoCollectionToFirebase(db, ref, collectionName));
+
+    return Promise.all(promises);
+  } catch(e) {
+    console.log(e);
   }
+}
 
-  ref.child(result.name).set(result.docObjects, (err) => {
-    if (err) {
-      return console.log(err);
-    }
-
-    console.log(`${result.name} Collection has been inserted to Firebase.`);
-  });
-});
+(async function() {
+  await migrateFromMongoToFirebase();
+  console.log('complete');
+}());
 
