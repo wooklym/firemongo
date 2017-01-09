@@ -83,7 +83,13 @@ async function migrateFromMongoToFirebase() {
 }
 
 (async function() {
-  await migrateFromMongoToFirebase();
-  console.log('complete');
+  try {
+    await migrateFromMongoToFirebase();
+    console.log('complete');
+    process.exit(0);
+  } catch(e) {
+    console.log(e);
+    process.exit(1);
+  }
 }());
 
